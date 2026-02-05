@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ball Counting Practice (CUT-E Style)</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; margin: 0; padding: 20px; }
+        #game-container { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        canvas { background: #fff; border: 4px solid #333; border-radius: 50%; margin-bottom: 20px; }
+        .options-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 300px; margin: 0 auto; }
+        button { padding: 15px; font-size: 18px; cursor: pointer; border: none; border-radius: 8px; background: #007bff; color: white; transition: 0.2s; }
+        button:hover { background: #0056b3; }
+        #feedback { height: 30px; margin-top: 15px; font-weight: bold; font-size: 20px; }
+        .stats { margin-bottom: 10px; font-size: 14px; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div class="stats">Score: <span id="score">0</span> | Questions: <span id="total">0</span></div>
+        <canvas id="ballCanvas" width="400" height="400"></canvas>
+        <div class="options-container" id="options"></div>
+        <div id="feedback"></div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('ballCanvas');
+    const ctx = canvas.getContext('2d');
+    const feedback = document.getElementById('feedback');
+    const optionsContainer = document.getElementById('options');
+    
+    let balls = [];
+    let currentCount = 0;
+    let score = 0;
+    let total = 0;
+    const radius = 195; // Circle boundary
+    const ballRadius = 8;
+
+    class Ball {
+        constructor() {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * (radius - 20);
+            this.x = 200 + Math.cos(angle) * dist;
+            this.y = 200 + Math.sin(angle) * dist;
+            this.vx = (Math.random() - 0.5) * 6;
+            this.vy = (Math.random() - 0.5) * 6;
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, ballRadius, 0, Math.PI * 2);
+            ctx.fillStyle = "#333";
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // Collision with circular boundary
+            const dx = this.x - 200;
+            const dy = this.y - 200;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance + ballRadius > radius) {
+                const nx = dx / distance; // Normal vector
+                const ny = dy / distance;
+                const dot = this.vx * nx + this.vy * ny;
+                this.vx -= 2 * dot * nx;
+                this.vy -= 2 * dot * ny;
+                // Move ball back inside
+                this.x = 200 + nx * (radius - ballRadius);
+                this.y = 200 + ny * (radius - ballRadius);
+            }
+        }
+    }
+
+    function initGame() {
+        currentCount = Math.floor(Math.random() * 11) + 4; // 4 to 14
+        balls = Array.from({ length: currentCount }, () => new Ball());
+        generateOptions();
+        feedback.innerText = "";
+    }
+
+    function generateOptions() {
+        optionsContainer.innerHTML = "";
+        let choices = new Set([currentCount]);
+        while(choices.size < 4) {
+            let alt = Math.floor(Math.random() * 11) + 4;
+            choices.add(alt);
+        }
+        
+        Array.from(choices).sort((a,b) => a - b).forEach(num => {
+            const btn = document.createElement('button');
+            btn.innerText = num;
+            btn.onclick = () => checkAnswer(num);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selected) {
+        total++;
+        if (selected === currentCount) {
+            score++;
+            feedback.style.color = "green";
+            feedback.innerText = "CORRECT!";
+        } else {
+            feedback.style.color = "red";
+            feedback.innerText = "WRONG! (It was " + currentCount + ")";
+        }
+        
+        document.getElementById('score').innerText = score;
+        document.getElementById('total').innerText = total;
+
+        setTimeout(initGame, 800); // Short delay before next round
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Draw main circle
+        ctx.beginPath();
+        ctx.arc(200, 200, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = "#ddd";
+        ctx.stroke();
+        
+        balls.forEach(b => { b.update(); b.draw(); });
+        requestAnimationFrame(animate);
+    }
+
+    initGame();
+    animate();
+</script>
+</body>
+</html>
